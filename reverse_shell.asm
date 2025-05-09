@@ -73,7 +73,12 @@ _start:
 socket_error:
     ; ERROR
     jmp exit
-    
+
+connect_error:
+    ; Gestion de l'erreur de connexion
+    ; (À implémenter plus tard)
+    jmp exit
+
 exit:
     ; END
     mov rax, SYS_EXIT
