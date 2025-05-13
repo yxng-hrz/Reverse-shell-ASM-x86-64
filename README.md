@@ -31,3 +31,35 @@ make re
    ```bash
    ./reverse_shell
    ```
+
+## Configuration
+
+Par défaut, le reverse shell se connecte à `127.0.0.1` (localhost) sur le port `4444`.
+
+Pour modifier l'adresse IP et le port, modifiez les lignes suivantes dans `reverse_shell.asm` :
+
+```asm
+ip dd 0x0100007f       ; 127.0.0.1 en format réseau (little-endian)
+port dw 0x5c11         ; Port 4444 (0x115c)
+```
+
+## Fonctionnalités
+
+- Connexion de la machine victime vers la machine attaquante
+- Bind d'un shell (/bin/sh) à travers la connexion réseau
+- Gestion d'erreur pour éviter les segmentation faults
+- Tentatives de reconnexion automatiques (toutes les 5 secondes)
+- Maximum de 10 tentatives de reconnexion
+- Code assembleur optimisé
+
+## Nettoyage
+
+Pour supprimer les fichiers objets :
+```bash
+make clean
+```
+
+Pour supprimer tous les fichiers générés (y compris l'exécutable) :
+```bash
+make fclean
+```
