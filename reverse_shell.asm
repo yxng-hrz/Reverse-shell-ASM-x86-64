@@ -68,8 +68,10 @@ try_connect:
     ; Sauvegarde du descripteur de socket
     mov [sockfd], rax
     mov word [sockaddr_in], AF_INET
-    mov word [sockaddr_in + 2], [port]
-    mov dword [sockaddr_in + 4], [ip]
+    mov ax, [port]
+    mov [sockaddr_in + 2], ax
+    mov eax, [ip]
+    mov [sockaddr_in + 4], eax
 
     xor rax, rax                       ; Remplir le reste avec des zéros
     mov qword [sockaddr_in + 8], rax
