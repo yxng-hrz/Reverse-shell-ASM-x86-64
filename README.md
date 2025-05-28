@@ -51,6 +51,8 @@ port dw 0x5c11         ; Port 4444 (0x115c)
 - Tentatives de reconnexion automatiques (toutes les 5 secondes)
 - Maximum de 10 tentatives de reconnexion
 - Code assembleur optimisé
+- Mode furtif : délai aléatoire (1–10 s) avant la première tentative de connexion, pour rendre le trafic moins prévisible
+- Journalisation locale : enregistrement de toute la session dans /tmp/reverse_shell.log via /usr/bin/script
 
 ## Nettoyage
 
